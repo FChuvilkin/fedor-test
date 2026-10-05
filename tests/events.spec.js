@@ -84,7 +84,7 @@ test('demo flow fires the agreed taxonomy with the right properties', async ({ p
   await page.locator('#drawer a[data-item="Global Economy"]').click();
   await arrived(page, /global-economy\.html/);
   const stream = await amp.waitFor('Stream Viewed');
-  expect(stream.event_properties).toMatchObject({ stream_name: 'Global Economy', parent_section: 'World', topic_followed: true });
+  expect(stream.event_properties).toMatchObject({ source: 'menu', stream_name: 'Global Economy', parent_section: 'World', topic_followed: true });
   expect(stream.event_properties.articles).toHaveLength(5);
   stream.event_properties.articles.forEach(expectArticleShape);
   expect(stream.event_properties.articles[1]).toMatchObject({ article_id: 'firstft-bolsonaro', article_type: 'newsletter', position: 2, topic: 'FirstFT', paywalled: false });
@@ -109,16 +109,16 @@ test('demo flow fires the agreed taxonomy with the right properties', async ({ p
   const viewed = await amp.waitFor('Article Viewed');
   expectArticleShape(viewed.event_properties);
   expect(viewed.event_properties).toMatchObject({ source: 'stream', article_id: 'firstft-bolsonaro', article_type: 'newsletter', section: 'World', topic: 'Global Economy', author: 'Gordon Smith', paywalled: false });
-  expect(amp.named('75% Scrolled')).toHaveLength(0);
+  expect(amp.named('Article Read')).toHaveLength(0);
 
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  const scrolled = await amp.waitFor('75% Scrolled');
+  const scrolled = await amp.waitFor('Article Read');
   expect(scrolled.event_properties).toMatchObject({ scroll_depth: 75, article_id: 'firstft-bolsonaro', article_type: 'newsletter' });
   expect(typeof scrolled.event_properties.time_on_page_seconds).toBe('number');
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await page.waitForTimeout(300);
-  expect(amp.named('75% Scrolled')).toHaveLength(1);
+  expect(amp.named('Article Read')).toHaveLength(1);
 
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.locator('.share-rail a[data-provider="X"]').click();
@@ -159,7 +159,7 @@ test('demo flow fires the agreed taxonomy with the right properties', async ({ p
   const names = [...new Set(amp.custom().map((e) => e.event_type))];
   for (const n of names) expect(TAXONOMY).toContain(n);
   for (const n of ['Sign In Started', 'Email Typed', 'Password Typed', 'Signed In Completed', 'Passkey Skipped', 'Signed Out', 'Home Page Viewed',
-    'Section Viewed', 'Stream Viewed', 'Article Viewed', 'Article Saved', 'Article Unsaved', 'Article Shared', '75% Scrolled', 'Search Submitted', 'Search Results Viewed']) {
+    'Section Viewed', 'Stream Viewed', 'Article Viewed', 'Article Saved', 'Article Unsaved', 'Article Shared', 'Article Read', 'Search Submitted', 'Search Results Viewed']) {
     expect(names, `expected "${n}" to have fired during the demo flow`).toContain(n);
   }
   for (const e of amp.events) {
@@ -193,6 +193,18 @@ test('search suggestion click is a Search Submitted with suggestion_used true', 
   expect(own(submitted.event_properties)).toEqual({ search_query: 'Ray Dalio', location: 'overlay', suggestion_used: true });
   const results = await amp.waitFor('Search Results Viewed');
   expect(results.event_properties.search_query).toBe('Ray Dalio');
+});
+
+test('stream source reflects how it was reached', async ({ page }) => {
+  const amp = await captureAmplitude(page);
+  await page.goto('/global-economy.html');
+  const direct = await amp.waitFor('Stream Viewed');
+  expect(direct.event_properties.source).toBe('direct');
+  await page.goto('/firstft.html');
+  await page.locator('a[data-track="topic_click"][href="global-economy.html"]').click();
+  await arrived(page, /global-economy\.html/);
+  const viaTopics = await amp.waitFor('Stream Viewed', 2);
+  expect(viaTopics.event_properties.source).toBe('article_topics');
 });
 
 test('home page source reflects how it was reached', async ({ page }) => {

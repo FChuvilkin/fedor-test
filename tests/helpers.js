@@ -14,7 +14,7 @@ function parseBody(req) {
 const TAXONOMY = [
   'Sign In Started', 'Email Typed', 'Password Typed', 'Signed In Completed', 'Passkey Skipped', 'Signed Out',
   'Home Page Viewed', 'Section Viewed', 'Stream Viewed', 'Article Viewed', 'Article Saved', 'Article Unsaved',
-  'Article Shared', '75% Scrolled', 'Search Submitted', 'Search Results Viewed'
+  'Article Shared', 'Article Read', 'Search Submitted', 'Search Results Viewed'
 ];
 
 async function captureAmplitude(page) {
