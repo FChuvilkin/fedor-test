@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in | Financial Times — Fedor Testing</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="auth" data-page="login">
+  <header class="auth-header"><a class="logo" href="index.html" data-track="logo_click">Financial Times</a></header>
+
+  <main class="auth-main">
+    <h1>Sign in</h1>
+
+    <!-- Step 1: email -->
+    <form id="email-form" data-step="email" novalidate>
+      <div class="field" id="email-field">
+        <label for="email">Email address</label>
+        <input type="email" id="email" name="email" autocomplete="email" required>
+        <div class="error">Please enter a valid email address.</div>
+      </div>
+      <button type="submit" class="btn btn-teal btn-block" id="email-next" data-track="login_email_next">Next</button>
+      <div class="or">or</div>
+      <p>You can only sign in with Google or Apple if you have an FT account associated with your corresponding account.</p>
+      <div class="stack">
+        <a href="#" class="btn btn-white btn-block" data-track="login_social_click" data-provider="google"><span style="color:#4285f4;font-weight:700">G</span>&nbsp;&nbsp;Sign in with Google</a>
+        <a href="#" class="btn btn-black btn-block" data-track="login_social_click" data-provider="apple">&#63743;&nbsp;&nbsp;Sign in with Apple</a>
+      </div>
+      <div class="register-row">
+        <span>Need to create an account?</span>
+        <a href="#" class="btn btn-outline" data-track="register_click">Register</a>
+      </div>
+      <p>Have a question? Visit the <a class="link" href="#" data-track="help_centre_click">FT Help Centre</a></p>
+    </form>
+
+    <!-- Step 2: password -->
+    <form id="password-form" data-step="password" class="hidden" novalidate>
+      <div class="field">
+        <label for="email-readonly">Email address</label>
+        <input type="email" id="email-readonly" disabled>
+      </div>
+      <div class="field" id="password-field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+        <div class="error">Please enter your password.</div>
+      </div>
+      <a class="link" href="#" data-track="forgot_password_click">Forgotten Password?</a>
+      <label class="check"><input type="checkbox" id="keep-signed-in" checked> Keep me signed in</label>
+      <button type="submit" class="btn btn-teal btn-block" id="password-submit" data-track="login_submit">Sign in</button>
+      <div class="or">or</div>
+      <a href="#" class="btn btn-outline btn-block" data-track="login_passwordless_click">Sign in without a password</a>
+      <p class="small" style="margin-top:32px">The <strong>Sign in</strong> option is protected by hCaptcha and its <a class="link" href="#">Privacy Policy</a> and <a class="link" href="#">Terms of Service</a> apply.</p>
+      <p class="small">The <strong>Sign in without a password</strong> option provides a hCaptcha-free sign in.</p>
+    </form>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

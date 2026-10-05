@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Search | Financial Times — Fedor Testing</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="search">
+  <div id="site-header" data-compact="true"></div>
+
+  <main class="search-main">
+    <div>
+      <form class="search-form" action="search.html" method="get" id="results-form">
+        <input type="search" name="q" id="results-input" autocomplete="off" aria-label="Search">
+        <button type="submit" class="btn btn-teal" data-track="search_submit" data-location="results">&#128269; Search</button>
+      </form>
+      <p class="search-help">Need some help? <a href="#" data-track="search_help_click">View our hints and tips</a>.</p>
+
+      <h1>Viewing results for <em>&ldquo;<span class="q-echo"></span>&rdquo;</em></h1>
+      <p class="count">1-25 of 583</p>
+
+      <div class="sort">Sort by<br><div class="seg"><button type="button" class="on" data-track="search_sort" data-sort="relevance">Relevance</button><button type="button" data-track="search_sort" data-sort="date">Date</button></div></div>
+
+      <div class="teaser">
+        <div class="img">Trump and Xi in Beijing</div>
+        <div class="body">
+          <span class="kicker">Chinese politics &amp; policy</span>
+          <h3><a href="article-dalio.html" data-track="search_result_click" data-rank="1" data-article="China's tribute system and the new world order">China's tribute system and the new world order</a></h3>
+          <p class="standfirst">Exercising power without resorting to war could be Beijing's ultimate show of strength</p>
+          <span class="time">June 18, 2026</span>
+        </div>
+        <div class="save-wrap"><button class="save-btn" data-article="china-tribute"></button>
+          <div class="save-pop"><div class="top"><span>&#10003; Added to <u>saved articles</u> in <em>my</em><strong>FT</strong></span><button class="x" aria-label="Close">&#10005;</button></div><div class="bottom"><strong>+ Add to a new list</strong>Lists are a simple way to curate your content</div></div></div>
+      </div>
+      <div class="teaser">
+        <div class="img">Ray Dalio</div>
+        <div class="body">
+          <span class="kicker">Global Economy</span>
+          <h3><a href="#" data-track="search_result_click" data-rank="2" data-article="Interview: Ray Dalio">Interview: Ray Dalio</a></h3>
+          <p class="standfirst">The FT's Q&amp;A with the founder of Bridgewater Associates</p>
+          <span class="time">September 2, 2025</span>
+        </div>
+        <div class="save-wrap"><button class="save-btn" data-article="dalio-interview"></button>
+          <div class="save-pop"><div class="top"><span>&#10003; Added to <u>saved articles</u> in <em>my</em><strong>FT</strong></span><button class="x" aria-label="Close">&#10005;</button></div><div class="bottom"><strong>+ Add to a new list</strong>Lists are a simple way to curate your content</div></div></div>
+      </div>
+      <div class="teaser">
+        <div class="img">Villa in Ibiza</div>
+        <div class="body">
+          <span class="kicker">House &amp; Home</span>
+          <h3><a href="#" data-track="search_result_click" data-rank="3" data-article="Why everyone (still) wants a piece of Ibiza">Why everyone (still) wants a piece of Ibiza</a></h3>
+          <p class="standfirst">Hedge fund founders and tech billionaires are driving a new wave of demand on the Balearic island</p>
+          <span class="time">August 22, 2026</span>
+        </div>
+        <div class="save-wrap"><button class="save-btn" data-article="ibiza"></button>
+          <div class="save-pop"><div class="top"><span>&#10003; Added to <u>saved articles</u> in <em>my</em><strong>FT</strong></span><button class="x" aria-label="Close">&#10005;</button></div><div class="bottom"><strong>+ Add to a new list</strong>Lists are a simple way to curate your content</div></div></div>
+      </div>
+      <div class="teaser">
+        <div class="img">Bridgewater offices</div>
+        <div class="body">
+          <span class="kicker">Hedge funds</span>
+          <h3><a href="#" data-track="search_result_click" data-rank="4" data-article="Bridgewater's flagship fund posts best year since 2010">Bridgewater's flagship fund posts best year since 2010</a></h3>
+          <p class="standfirst">Pure Alpha gains as macro bets on rates and currencies pay off</p>
+          <span class="time">January 9, 2026</span>
+        </div>
+        <div class="save-wrap"><button class="save-btn" data-article="bridgewater-year"></button>
+          <div class="save-pop"><div class="top"><span>&#10003; Added to <u>saved articles</u> in <em>my</em><strong>FT</strong></span><button class="x" aria-label="Close">&#10005;</button></div><div class="bottom"><strong>+ Add to a new list</strong>Lists are a simple way to curate your content</div></div></div>
+      </div>
+      <div class="teaser">
+        <div class="img">Book cover</div>
+        <div class="body">
+          <span class="kicker">Books</span>
+          <h3><a href="#" data-track="search_result_click" data-rank="5" data-article="How Countries Go Broke — Ray Dalio's debt warning">How Countries Go Broke — Ray Dalio's debt warning</a></h3>
+          <p class="standfirst">The billionaire investor's latest book argues the US is approaching a fiscal reckoning</p>
+          <span class="time">June 3, 2025</span>
+        </div>
+        <div class="save-wrap"><button class="save-btn" data-article="dalio-book"></button>
+          <div class="save-pop"><div class="top"><span>&#10003; Added to <u>saved articles</u> in <em>my</em><strong>FT</strong></span><button class="x" aria-label="Close">&#10005;</button></div><div class="bottom"><strong>+ Add to a new list</strong>Lists are a simple way to curate your content</div></div></div>
+      </div>
+    </div>
+
+    <aside class="filter">
+      <h4>Filter by</h4>
+      <div class="group">
+        <div class="group-h">Date <span>&#8963;</span></div>
+        <ul>
+          <li><a href="#" data-track="search_filter" data-filter="last-24-hours">Last 24 hours</a></li>
+          <li><a href="#" data-track="search_filter" data-filter="last-7-days">Last 7 days</a></li>
+          <li><a href="#" data-track="search_filter" data-filter="last-30-days">Last 30 days</a></li>
+          <li><a href="#" data-track="search_filter" data-filter="last-year">Last year</a></li>
+          <li><a href="#" data-track="search_filter" data-filter="date-range">Date range</a><span>&#8964;</span></li>
+        </ul>
+      </div>
+      <div class="related-pages">
+        <h4>Related pages</h4>
+        <a href="#" data-track="search_related_click" data-item="Ray Dalio">Ray Dalio</a>
+        <a href="#" data-track="search_related_click" data-item="Middle Eastern Politics & Society">Middle Eastern Politics &amp; Society</a>
+        <a href="#" data-track="search_related_click" data-item="Middle East war">Middle East war</a>
+        <a href="#" data-track="search_related_click" data-item="Middle East & North Africa">Middle East &amp; North Africa</a>
+        <a href="#" data-track="search_related_click" data-item="Middle Eastern Economy">Middle Eastern Economy</a>
+        <a href="#" data-track="search_related_click" data-item="Middle Eastern Companies">Middle Eastern Companies</a>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <div class="wrap"><p class="footer-legal">© THE FINANCIAL TIMES LTD 2026. <small>This is FT (Fedor Testing), a mock site for testing Amplitude. Not affiliated with the Financial Times.</small></p></div>
+    <div class="footer-nikkei"><div class="wrap">A Nikkei Company</div></div>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>
