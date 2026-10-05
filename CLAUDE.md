@@ -19,10 +19,15 @@ FT (Fedor Testing): a mock two-page news site styled like a broadsheet financial
 - `search.html` — search results, reads `?q=`
 - `article-dalio.html` — opinion article reached from search
 - `styles.css` — shared styles
-- `app.js` — shared script. Auth state (`localStorage.ft_user`), click tracking stub, Amplitude SDK and Experiment code go here.
+- `app.js` — shared script. Auth state (`localStorage.ft_user`), site chrome, Amplitude Browser SDK wiring and the event taxonomy.
+- `config.js` — sets `window.FT_CONFIG.AMPLITUDE_API_KEY`. Committed on purpose: browser keys are public and GitHub Pages needs it.
+- `tests/` — Playwright suite (`site.spec.js` smoke tests, `events.spec.js` asserts every Amplitude event in the demo flow). The only tooling in the repo; it was explicitly requested.
 
 ## Conventions
-- Every interactive element gets an `id` and a `data-track="event_name"` attribute, plus `data-*` props. `app.js` logs these on click; swap the stub for `amplitude.track()` when wiring the SDK.
+- Every interactive element gets an `id` and a `data-track="event_name"` attribute, plus `data-*` props. `app.js` console-logs these on click (`FT.log`) but does NOT send them to Amplitude.
+- Amplitude receives only the 16 taxonomy events listed at the top of `app.js` (Title Case, Noun + Past-Tense Verb) via `FT.track`. Add new events there, not as raw clicks. Article events share the `article_*` properties; list views carry an `articles` object array built by `articlesIn()`.
+- Events fired right before a navigation must go through `FT.navAfterFlush` / `FT.flushThen` so the SDK sends them before the page unloads.
+- Article pages declare their metadata on `<body data-article-id data-article-type data-section data-topic data-author data-paywalled>`.
 - `href="#"` links are dead links; `app.js` prevents navigation on them.
 - `.logged-in-only` / `.logged-out-only` classes toggle markup per auth state.
 - Masthead, primary nav, burger drawer and search overlay are rendered by `renderHeader()` in `app.js` into `<div id="site-header" data-current="..." data-compact="true">`. Do not hand-write the masthead in pages.
@@ -31,6 +36,8 @@ FT (Fedor Testing): a mock two-page news site styled like a broadsheet financial
 
 ## Run
 Open `index.html` in a browser, or `python3 -m http.server` from the repo root.
+
+Tests: `cd tests && npm install && npx playwright test`. They intercept all Amplitude requests, so nothing reaches the project.
 
 ## Hosting
 Will be hosted on GitHub Pages from the `master` branch root.
