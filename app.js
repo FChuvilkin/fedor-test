@@ -125,12 +125,13 @@ function slug(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^
 function text(el) { return el ? el.textContent.trim().replace(/\s+/g, ' ') : ''; }
 
 // Build one item of an `articles` object array from a headline link in a list or grid.
+// A link may set data-article-id when its text differs from the canonical title of the article it opens.
 function articleFromLink(a, section, position) {
   var title = text(a);
   var box = a.closest('.card, .teaser, .lead-grid > div') || a.parentNode;
   var opinion = a.classList.contains('quote') || a.parentNode.classList.contains('quote') || section === 'Opinion';
   var art = {
-    article_id: ARTICLE_IDS[title] || slug(title),
+    article_id: a.dataset.articleId || ARTICLE_IDS[title] || slug(title),
     article_title: title,
     article_type: /^FirstFT/.test(title) ? 'newsletter' : (opinion ? 'opinion' : 'news'),
     section: section,
