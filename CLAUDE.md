@@ -25,7 +25,7 @@ FT (Fedor Testing): a mock two-page news site styled like a broadsheet financial
 
 ## Conventions
 - Every interactive element gets an `id` and a `data-track="event_name"` attribute, plus `data-*` props. `app.js` console-logs these on click (`FT.log`) but does NOT send them to Amplitude.
-- Amplitude receives only the 16 taxonomy events listed at the top of `app.js` (Title Case, Noun + Past-Tense Verb) via `FT.track`. Add new events there, not as raw clicks. Article events share the `article_*` properties; list views carry an `articles` object array built by `articlesIn()`.
+- Amplitude receives only the 16 taxonomy events listed at the top of `app.js` (Title Case, Noun + Past-Tense Verb) via `FT.track`. Add new events there, not as raw clicks. Every article-bearing event carries an `articles` object array (entries built by `articlesIn()` or `currentArticle()`); single-article events (Article Viewed/Read/Saved/Unsaved/Shared) nest their one article as `articles: [art]` with `position: 1`, never as flat top-level props.
 - Events fired right before a navigation must go through `FT.navAfterFlush` / `FT.flushThen` so the SDK sends them before the page unloads.
 - Article pages declare their metadata on `<body data-article-id data-article-type data-section data-topic data-author data-paywalled>`.
 - `href="#"` links are dead links; `app.js` prevents navigation on them.

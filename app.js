@@ -145,11 +145,12 @@ function articleFromLink(a, section, position) {
 function articlesIn(root, section) {
   return Array.prototype.map.call(root.querySelectorAll('a[data-track="headline_click"]'), function (a, i) { return articleFromLink(a, section, i + 1); });
 }
-// Shared article properties for the article page we are on (from <body data-*>).
+// The article page we are on (from <body data-*>), shaped like an articlesIn() entry.
+// Single-article events still nest it as articles: [art] so every event shares one shape.
 function currentArticle() {
   var d = document.body.dataset;
   return { article_id: d.articleId, article_title: d.article, article_type: d.articleType, section: d.section,
-           topic: d.topic, author: d.author, paywalled: d.paywalled === 'true' };
+           topic: d.topic, author: d.author, paywalled: d.paywalled === 'true', position: 1 };
 }
 var SHARE_CHANNELS = { X: 'twitter', Facebook: 'facebook', LinkedIn: 'linkedin', Share: 'link' };
 
@@ -255,7 +256,7 @@ function bookmark(filled) {
   return '<svg viewBox="0 0 20 26" aria-hidden="true"><path d="M2 1h16v24l-8-6-8 6z" fill="' + (filled ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2"/></svg>';
 }
 function trackSave(saved, art, location) {
-  FT.track(saved ? 'Article Saved' : 'Article Unsaved', Object.assign({ location: location }, art));
+  FT.track(saved ? 'Article Saved' : 'Article Unsaved', { location: location, articles: [art] });
   FT.identifyUser();
 }
 function initSaveButtons() {
@@ -272,7 +273,7 @@ function initSaveButtons() {
       var saved = FT.toggleSaved(id);
       paint(saved);
       var teaser = btn.closest('.teaser'), link = teaser && teaser.querySelector('a[data-track="headline_click"]');
-      var art = link ? articleFromLink(link, 'World', teasers.indexOf(teaser) + 1) : { article_id: id };
+      var art = link ? articleFromLink(link, 'World', teasers.indexOf(teaser) + 1) : { article_id: id, position: 1 };
       trackSave(saved, art, 'stream');
       var pop = btn.parentNode.querySelector('.save-pop');
       if (pop) {
@@ -336,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function () {
       case 'login_passwordless_click':
         FT.track('Sign In Started', { sign_in_type: 'passwordless', location: 'login_page' }); break;
       case 'share_click':
-        FT.track('Article Shared', Object.assign({ share_channel: SHARE_CHANNELS[el.dataset.provider] || el.dataset.provider.toLowerCase() }, currentArticle()));
+        FT.track('Article Shared', { share_channel: SHARE_CHANNELS[el.dataset.provider] || el.dataset.provider.toLowerCase(), articles: [currentArticle()] });
         FT.toast('Shared to ' + el.dataset.provider + ' (mock)'); break;
       case 'search_suggestion_click':
       case 'search_related_click':
@@ -384,14 +385,14 @@ document.addEventListener('DOMContentLoaded', function () {
   // ---- Article: view, then Article Read once at 75% scroll ----
   if (page === 'article') {
     var art = currentArticle(), openedAt = Date.now(), scrolled = false;
-    FT.track('Article Viewed', Object.assign({ source: FT.takeSource('direct') }, art));
+    FT.track('Article Viewed', { source: FT.takeSource('direct'), articles: [art] });
     function onScroll() {
       if (scrolled) return;
       var h = document.documentElement.scrollHeight;
       if ((window.scrollY + window.innerHeight) / h < 0.75) return;
       scrolled = true;
       window.removeEventListener('scroll', onScroll);
-      FT.track('Article Read', Object.assign({ scroll_depth: 75, time_on_page_seconds: Math.round((Date.now() - openedAt) / 1000) }, art));
+      FT.track('Article Read', { scroll_depth: 75, time_on_page_seconds: Math.round((Date.now() - openedAt) / 1000), articles: [art] });
     }
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();

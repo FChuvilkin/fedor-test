@@ -93,27 +93,37 @@ test('demo flow fires the agreed taxonomy with the right properties', async ({ p
   const saveBtn = page.locator('.save-btn[data-article="firstft-bolsonaro"]');
   await saveBtn.click();
   const saved = await amp.waitFor('Article Saved');
-  expectArticleShape(saved.event_properties);
-  expect(saved.event_properties).toMatchObject({ article_id: 'firstft-bolsonaro', article_type: 'newsletter', location: 'stream', position: 2, section: 'World' });
+  expect(saved.event_properties.location).toBe('stream');
+  expect(saved.event_properties.articles).toHaveLength(1);
+  expectArticleShape(saved.event_properties.articles[0]);
+  expect(saved.event_properties.articles[0]).toMatchObject({ article_id: 'firstft-bolsonaro', article_type: 'newsletter', position: 2, section: 'World' });
+  expect(saved.event_properties.article_id).toBeUndefined();
   expect(saved.user_id).toBe(EMAIL);
   await amp.waitForIdentify((e) => e.user_properties && e.user_properties.$set && e.user_properties.$set.saved_article_count === 1);
 
   await saveBtn.click();
   const unsaved = await amp.waitFor('Article Unsaved');
-  expect(unsaved.event_properties).toMatchObject({ article_id: 'firstft-bolsonaro', location: 'stream', position: 2 });
+  expect(unsaved.event_properties.location).toBe('stream');
+  expect(unsaved.event_properties.articles).toHaveLength(1);
+  expect(unsaved.event_properties.articles[0]).toMatchObject({ article_id: 'firstft-bolsonaro', position: 2 });
   await amp.waitForIdentify((e) => e.user_properties && e.user_properties.$set && e.user_properties.$set.saved_article_count === 0);
 
   // ---- Part 3: Read and share ----
   await page.locator('a[data-track="headline_click"][href="firstft.html"]').click();
   await arrived(page, /firstft\.html/);
   const viewed = await amp.waitFor('Article Viewed');
-  expectArticleShape(viewed.event_properties);
-  expect(viewed.event_properties).toMatchObject({ source: 'stream', article_id: 'firstft-bolsonaro', article_type: 'newsletter', section: 'World', topic: 'Global Economy', author: 'Gordon Smith', paywalled: false });
+  expect(viewed.event_properties.source).toBe('stream');
+  expect(viewed.event_properties.articles).toHaveLength(1);
+  expectArticleShape(viewed.event_properties.articles[0]);
+  expect(viewed.event_properties.articles[0]).toMatchObject({ article_id: 'firstft-bolsonaro', article_type: 'newsletter', section: 'World', topic: 'Global Economy', author: 'Gordon Smith', paywalled: false, position: 1 });
+  expect(viewed.event_properties.article_id).toBeUndefined();
   expect(amp.named('Article Read')).toHaveLength(0);
 
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const scrolled = await amp.waitFor('Article Read');
-  expect(scrolled.event_properties).toMatchObject({ scroll_depth: 75, article_id: 'firstft-bolsonaro', article_type: 'newsletter' });
+  expect(scrolled.event_properties.scroll_depth).toBe(75);
+  expect(scrolled.event_properties.articles).toHaveLength(1);
+  expect(scrolled.event_properties.articles[0]).toMatchObject({ article_id: 'firstft-bolsonaro', article_type: 'newsletter', position: 1 });
   expect(typeof scrolled.event_properties.time_on_page_seconds).toBe('number');
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
@@ -123,8 +133,10 @@ test('demo flow fires the agreed taxonomy with the right properties', async ({ p
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.locator('.share-rail a[data-provider="X"]').click();
   const shared = await amp.waitFor('Article Shared');
-  expectArticleShape(shared.event_properties);
-  expect(shared.event_properties).toMatchObject({ share_channel: 'twitter', article_id: 'firstft-bolsonaro' });
+  expect(shared.event_properties.share_channel).toBe('twitter');
+  expect(shared.event_properties.articles).toHaveLength(1);
+  expectArticleShape(shared.event_properties.articles[0]);
+  expect(shared.event_properties.articles[0]).toMatchObject({ article_id: 'firstft-bolsonaro', position: 1 });
 
   // ---- Part 4: Search ----
   await page.locator('#search-btn').click();
@@ -140,7 +152,8 @@ test('demo flow fires the agreed taxonomy with the right properties', async ({ p
   await page.locator('a[data-track="search_result_click"][data-rank="1"]').click();
   await arrived(page, /article-dalio\.html/);
   const dalio = await amp.waitFor('Article Viewed', 2);
-  expect(dalio.event_properties).toMatchObject({ source: 'search_results', article_id: 'china-tribute', article_type: 'opinion', section: 'Opinion', author: 'Ray Dalio', paywalled: true });
+  expect(dalio.event_properties.source).toBe('search_results');
+  expect(dalio.event_properties.articles[0]).toMatchObject({ article_id: 'china-tribute', article_type: 'opinion', section: 'Opinion', author: 'Ray Dalio', paywalled: true, position: 1 });
 
   // ---- Reset ----
   await page.locator('#nav-account').click();
@@ -173,7 +186,8 @@ test('other Sign In Started sources and the paywall carry the right properties',
   const amp = await captureAmplitude(page);
   await page.goto('/article.html');
   const viewed = await amp.waitFor('Article Viewed');
-  expect(viewed.event_properties).toMatchObject({ source: 'direct', article_id: 'bolsonaro-lead', paywalled: true });
+  expect(viewed.event_properties.source).toBe('direct');
+  expect(viewed.event_properties.articles[0]).toMatchObject({ article_id: 'bolsonaro-lead', paywalled: true, position: 1 });
   await page.locator('.paywall a[data-track="sign_in_click"]').click();
   const paywall = await amp.waitFor('Sign In Started');
   expect(own(paywall.event_properties)).toEqual({ sign_in_type: 'email', location: 'paywall' });
