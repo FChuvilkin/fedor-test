@@ -21,6 +21,8 @@ test('demo flow fires the agreed taxonomy with the right properties', async ({ p
   expectArticleShape(home.event_properties.articles[0]);
   expect(home.event_properties.articles[0]).toMatchObject({ article_id: 'bolsonaro-lead', position: 1, section: 'Home', topic: 'Brazilian politics' });
   expect(home.event_properties.articles.map((a) => a.position)).toEqual([1, 2, 3, 4, 5, 6]);
+  // Related headlines under the lead open the same article, so they share its id
+  expect(home.event_properties.articles.slice(0, 3).map((a) => a.article_id)).toEqual(['bolsonaro-lead', 'bolsonaro-lead', 'bolsonaro-lead']);
 
   // Scroll the full homepage: every titled section fires Section Viewed once
   const sectionTitles = await page.locator('main > section .section-title').evaluateAll((els) => els.map((el) => el.textContent.trim()));
