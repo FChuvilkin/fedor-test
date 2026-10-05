@@ -1,7 +1,13 @@
-// FT — Fedor Testing. Shared script. Amplitude Analytics + Web Experiment code goes here.
+// FT — Fedor Testing. Shared script: auth state, site chrome, Amplitude Analytics.
+//
+// Amplitude events follow the agreed taxonomy (Title Case, Noun + Past-Tense Verb):
+//   Sign In Started, Email Typed, Password Typed, Signed In Completed, Passkey Skipped, Signed Out,
+//   Home Page Viewed, Section Viewed, Stream Viewed, Article Viewed, Article Saved, Article Unsaved,
+//   Article Shared, 75% Scrolled, Search Submitted, Search Results Viewed.
+// Raw data-track clicks are console-logged only (FT.log) and never sent to Amplitude.
 
 var FT = (function () {
-  var USER = 'ft_user', SAVED = 'ft_saved', TOPICS = 'ft_topics';
+  var USER = 'ft_user', SAVED = 'ft_saved', TOPICS = 'ft_topics', EDITION = 'ft_edition', SOURCE = 'ft_source';
   var DEFAULT_TOPICS = ['Global Economy', 'World', 'Companies'];
 
   function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
@@ -29,18 +35,123 @@ var FT = (function () {
     return i === -1;
   }
 
-  // Placeholder: swap for amplitude.track() once the SDK is wired in.
-  function track(name, props) { console.log('[track]', name, props || {}); }
+  function edition() { return read(EDITION, 'international'); }
+  function setEdition(e) { write(EDITION, e); identifyUser(); }
+
+  // Navigation source: set before leaving a page, read by the next page's *Viewed event.
+  function setSource(v) { sessionStorage.setItem(SOURCE, v); }
+  function takeSource(fallback) { var v = sessionStorage.getItem(SOURCE); sessionStorage.removeItem(SOURCE); return v || fallback; }
+
+  // ---------- Amplitude Browser SDK ----------
+  var amp = window.amplitude;
+  var apiKey = window.FT_CONFIG && window.FT_CONFIG.AMPLITUDE_API_KEY;
+  var enabled = !!(amp && apiKey);
+
+  function init() {
+    if (!enabled) { console.warn('[FT] Amplitude disabled: SDK not loaded or AMPLITUDE_API_KEY missing in config.js'); return; }
+    var user = getUser();
+    amp.init(apiKey, user ? user.email : undefined, {
+      serverZone: 'US',
+      autocapture: { elementInteractions: false, formInteractions: false }
+    });
+    // Send whatever is queued before the browser leaves the page.
+    window.addEventListener('pagehide', function () { amp.setTransport('beacon'); amp.flush(); });
+  }
+
+  function track(name, props) {
+    props = props || {};
+    console.log('[amplitude]', name, props);
+    if (enabled) amp.track(name, props);
+  }
+  function log(name, props) { console.debug('[ui]', name, props || {}); }
+
+  function identifyUser(extra) {
+    if (!enabled) return;
+    var id = new amp.Identify();
+    id.set('saved_article_count', savedIds().length);
+    id.set('followed_topics', topics());
+    id.set('edition', edition());
+    Object.keys(extra || {}).forEach(function (k) { id.set(k, extra[k]); });
+    amp.identify(id);
+  }
+  function signIn(email, type) {
+    setUser({ email: email, signedInAt: new Date().toISOString() });
+    if (enabled) amp.setUserId(email);
+    identifyUser({ sign_in_type: type });
+  }
+  function signOut() { clearUser(); if (enabled) amp.reset(); }
+
+  // Send queued events now, then run `go` (usually a navigation). Falls through after 800ms if the network is slow.
+  function flushThen(go) {
+    if (!enabled) return go();
+    var done = false;
+    function fin() { if (!done) { done = true; go(); } }
+    var r = amp.flush();
+    (r && r.promise ? r.promise : Promise.resolve()).then(fin, fin);
+    setTimeout(fin, 800);
+  }
+  // Delay an anchor's navigation until queued events are sent. Dead links are left alone.
+  function navAfterFlush(e, el) {
+    if (el.tagName !== 'A' || el.getAttribute('href') === '#') return;
+    e.preventDefault();
+    var href = el.href;
+    flushThen(function () { location.href = href; });
+  }
 
   function toast(msg) {
     var el = document.getElementById('toast');
+    if (!el) return;
     el.textContent = msg; el.classList.add('show');
     clearTimeout(el._t); el._t = setTimeout(function () { el.classList.remove('show'); }, 2500);
   }
 
   return { getUser: getUser, setUser: setUser, clearUser: clearUser, isSaved: isSaved, toggleSaved: toggleSaved,
-           isFollowed: isFollowed, toggleTopic: toggleTopic, track: track, toast: toast };
+           isFollowed: isFollowed, toggleTopic: toggleTopic, setEdition: setEdition, setSource: setSource, takeSource: takeSource,
+           init: init, track: track, log: log, toast: toast, flushThen: flushThen, navAfterFlush: navAfterFlush, identifyUser: identifyUser, signIn: signIn, signOut: signOut };
 })();
+
+// ---------- Article metadata ----------
+// Stable ids for articles that have their own page or a Save button; everything else gets a slug of its title.
+var ARTICLE_IDS = {
+  'Flávio Bolsonaro takes commanding lead in Brazil election': 'bolsonaro-lead',
+  "FirstFT: Flávio Bolsonaro secures early lead in Brazil's election": 'firstft-bolsonaro',
+  "China's tribute system and the new world order": 'china-tribute',
+  "Trump's diesel export coercion will not strengthen the US": 'diesel-coercion',
+  "Bond turbulence means it's time for the ECB to put QT on hold": 'ecb-qt',
+  'Euro slides to 17-month low against dollar': 'euro-low',
+  'US employment growth slowed sharply in September': 'us-jobs'
+};
+function slug(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60); }
+function text(el) { return el ? el.textContent.trim().replace(/\s+/g, ' ') : ''; }
+
+// Build one item of an `articles` object array from a headline link in a list or grid.
+function articleFromLink(a, section, position) {
+  var title = text(a);
+  var box = a.closest('.card, .teaser, .lead-grid > div') || a.parentNode;
+  var opinion = a.classList.contains('quote') || a.parentNode.classList.contains('quote') || section === 'Opinion';
+  var art = {
+    article_id: ARTICLE_IDS[title] || slug(title),
+    article_title: title,
+    article_type: /^FirstFT/.test(title) ? 'newsletter' : (opinion ? 'opinion' : 'news'),
+    section: section,
+    paywalled: !!box.querySelector('.tag.premium'),
+    position: position
+  };
+  var kicker = box.querySelector('.kicker'), author = box.querySelector('.author');
+  if (kicker) art.topic = text(kicker);
+  if (author) art.author = text(author);
+  return art;
+}
+function articlesIn(root, section) {
+  return Array.prototype.map.call(root.querySelectorAll('a[data-track="headline_click"]'), function (a, i) { return articleFromLink(a, section, i + 1); });
+}
+// Shared article properties for the article page we are on (from <body data-*>).
+function currentArticle() {
+  var d = document.body.dataset;
+  return { article_id: d.articleId, article_title: d.article, article_type: d.articleType, section: d.section,
+           topic: d.topic, author: d.author, paywalled: d.paywalled === 'true' };
+}
+var SHARE_CHANNELS = { X: 'twitter', Facebook: 'facebook', LinkedIn: 'linkedin', Share: 'link' };
 
 // ---------- Shared chrome ----------
 var NAV = [['home','Home','index.html'],['world','World','#'],['us','US','#'],['companies','Companies','#'],['tech','Tech','#'],['markets','Markets','#'],['climate','Climate','#'],['opinion','Opinion','#'],['lex','Lex','#'],['work-careers','Work & Careers','#'],['life-arts','Life & Arts','#'],['how-to-spend-it','How to Spend It','#'],['stocks-game','Stocks Game','#']];
@@ -131,8 +242,11 @@ function renderHeader(mount) {
   });
   document.getElementById('search-form').addEventListener('submit', function (e) {
     var q = input.value.trim();
-    if (!q) { e.preventDefault(); return; }
-    FT.track('search', { query: q, page: document.body.dataset.page });
+    e.preventDefault();
+    if (!q) return;
+    FT.track('Search Submitted', { search_query: q, location: 'overlay', suggestion_used: false });
+    var form = this;
+    FT.flushThen(function () { form.submit(); });
   });
 }
 
@@ -140,7 +254,12 @@ function renderHeader(mount) {
 function bookmark(filled) {
   return '<svg viewBox="0 0 20 26" aria-hidden="true"><path d="M2 1h16v24l-8-6-8 6z" fill="' + (filled ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2"/></svg>';
 }
+function trackSave(saved, art, location) {
+  FT.track(saved ? 'Article Saved' : 'Article Unsaved', Object.assign({ location: location }, art));
+  FT.identifyUser();
+}
 function initSaveButtons() {
+  var teasers = Array.prototype.slice.call(document.querySelectorAll('.teaser'));
   document.querySelectorAll('.save-btn').forEach(function (btn) {
     var id = btn.dataset.article;
     function paint(saved) {
@@ -152,6 +271,9 @@ function initSaveButtons() {
     btn.addEventListener('click', function () {
       var saved = FT.toggleSaved(id);
       paint(saved);
+      var teaser = btn.closest('.teaser'), link = teaser && teaser.querySelector('a[data-track="headline_click"]');
+      var art = link ? articleFromLink(link, 'World', teasers.indexOf(teaser) + 1) : { article_id: id };
+      trackSave(saved, art, 'stream');
       var pop = btn.parentNode.querySelector('.save-pop');
       if (pop) {
         if (saved) { pop.classList.add('open'); clearTimeout(pop._t); pop._t = setTimeout(function () { pop.classList.remove('open'); }, 6000); }
@@ -166,7 +288,7 @@ function initSaveButtons() {
     var id = btn.dataset.article;
     function paint(saved) { btn.classList.toggle('saved', saved); btn.innerHTML = bookmark(saved) + (saved ? 'Saved' : 'Save'); btn.dataset.track = saved ? 'article_unsave' : 'article_save'; }
     paint(FT.isSaved(id));
-    btn.addEventListener('click', function () { paint(FT.toggleSaved(id)); });
+    btn.addEventListener('click', function () { var saved = FT.toggleSaved(id); paint(saved); trackSave(saved, currentArticle(), 'share_rail'); });
   });
 }
 
@@ -175,7 +297,7 @@ function initTopicButtons() {
     var topic = btn.dataset.topic;
     function paint(on) { btn.classList.toggle('added', on); btn.textContent = on ? 'Added' : 'Add to myFT'; btn.dataset.track = on ? 'topic_unfollow' : 'topic_follow'; }
     paint(FT.isFollowed(topic));
-    btn.addEventListener('click', function (e) { e.preventDefault(); paint(FT.toggleTopic(topic)); });
+    btn.addEventListener('click', function (e) { e.preventDefault(); paint(FT.toggleTopic(topic)); FT.identifyUser(); });
   });
 }
 
@@ -184,30 +306,94 @@ document.addEventListener('DOMContentLoaded', function () {
   var page = document.body.dataset.page;
   var user = FT.getUser();
   if (user) document.body.classList.add('logged-in');
+  FT.init();
 
   var mount = document.getElementById('site-header');
   if (mount) renderHeader(mount);
   initSaveButtons();
   initTopicButtons();
 
-  var pv = { page: page, logged_in: !!user };
-  if (document.body.dataset.article) pv.article_title = document.body.dataset.article;
   var q = new URLSearchParams(location.search).get('q');
-  if (q) pv.query = q;
-  FT.track('page_view', pv);
 
-  // Dead links (href="#") must not jump the page. Anything with data-track is logged with its data-* attrs.
+  // Dead links (href="#") must not jump the page. Every data-track click is console-logged; a few map to Amplitude events.
+  var ARTICLE_SOURCES = { stream: 'stream', 'latest-world': 'latest_on_world' };
   document.addEventListener('click', function (e) {
     var el = e.target.closest('a, button');
     if (!el) return;
     if (el.getAttribute('href') === '#') e.preventDefault();
-    if (el.dataset.track) {
-      var props = { page: page, text: el.textContent.trim().slice(0, 80) };
-      Object.keys(el.dataset).forEach(function (k) { if (k !== 'track') props[k] = el.dataset[k]; });
-      FT.track(el.dataset.track, props);
-      if (el.dataset.track === 'share_click') FT.toast('Shared to ' + el.dataset.provider + ' (mock)');
+    var t = el.dataset.track;
+    if (!t) return;
+    var props = { page: page, text: el.textContent.trim().slice(0, 80) };
+    Object.keys(el.dataset).forEach(function (k) { if (k !== 'track') props[k] = el.dataset[k]; });
+    FT.log(t, props);
+
+    switch (t) {
+      case 'sign_in_click':
+        FT.track('Sign In Started', { sign_in_type: 'email', location: el.dataset.location === 'header' ? 'header' : 'paywall' });
+        FT.navAfterFlush(e, el); break;
+      case 'login_social_click':
+        FT.track('Sign In Started', { sign_in_type: el.dataset.provider, location: 'login_page' }); break;
+      case 'login_passwordless_click':
+        FT.track('Sign In Started', { sign_in_type: 'passwordless', location: 'login_page' }); break;
+      case 'share_click':
+        FT.track('Article Shared', Object.assign({ share_channel: SHARE_CHANNELS[el.dataset.provider] || el.dataset.provider.toLowerCase() }, currentArticle()));
+        FT.toast('Shared to ' + el.dataset.provider + ' (mock)'); break;
+      case 'search_suggestion_click':
+      case 'search_related_click':
+        FT.track('Search Submitted', { search_query: el.dataset.query || el.dataset.item, location: page === 'search' ? 'results_page' : 'overlay', suggestion_used: true });
+        FT.navAfterFlush(e, el); break;
+      case 'edition_switch':
+        FT.setEdition(el.dataset.edition); break;
+      // Where the next page's *Viewed event came from
+      case 'logo_click': FT.setSource('logo'); break;
+      case 'nav_click': if (el.dataset.section === 'home') FT.setSource('nav_home'); break;
+      case 'menu_link_click': if (el.dataset.section === 'home') FT.setSource('menu_home'); break;
+      case 'account_back_home': FT.setSource('account_back_home'); break;
+      case 'headline_click': case 'video_click': FT.setSource(ARTICLE_SOURCES[el.dataset.section] || page); break;
+      case 'most_read_click': FT.setSource('most_read'); break;
+      case 'search_result_click': FT.setSource('search_results'); break;
     }
   });
+
+  // ---- Home: lead articles ride on Home Page Viewed, every titled section fires Section Viewed once it scrolls into view ----
+  if (page === 'home') {
+    var sections = Array.prototype.slice.call(document.querySelectorAll('main > section.section'));
+    FT.track('Home Page Viewed', { source: FT.takeSource('direct'), articles: articlesIn(sections[0], 'Home') });
+    var titled = sections.filter(function (s) { return s.querySelector('.section-title'); });
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        io.unobserve(en.target);
+        var name = text(en.target.querySelector('.section-title'));
+        FT.track('Section Viewed', { section_name: name, position: titled.indexOf(en.target) + 1, articles: articlesIn(en.target, name) });
+      });
+    }, { rootMargin: '0px 0px -30% 0px' });
+    titled.forEach(function (s) { io.observe(s); });
+  }
+
+  // ---- Topic stream ----
+  if (page === 'global-economy') {
+    FT.track('Stream Viewed', {
+      stream_name: text(document.querySelector('.stream-title h1')), parent_section: 'World',
+      topic_followed: FT.isFollowed('Global Economy'), articles: articlesIn(document.querySelector('.stream-grid'), 'World')
+    });
+  }
+
+  // ---- Article: view, then 75% scroll once ----
+  if (page === 'article') {
+    var art = currentArticle(), openedAt = Date.now(), scrolled = false;
+    FT.track('Article Viewed', Object.assign({ source: FT.takeSource('direct') }, art));
+    function onScroll() {
+      if (scrolled) return;
+      var h = document.documentElement.scrollHeight;
+      if ((window.scrollY + window.innerHeight) / h < 0.75) return;
+      scrolled = true;
+      window.removeEventListener('scroll', onScroll);
+      FT.track('75% Scrolled', Object.assign({ scroll_depth: 75, time_on_page_seconds: Math.round((Date.now() - openedAt) / 1000) }, art));
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
 
   // ---- Search results page: reflect the query ----
   if (page === 'search') {
@@ -218,6 +404,18 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.sort .seg button').forEach(function (b) {
       b.addEventListener('click', function () { document.querySelectorAll('.sort .seg button').forEach(function (x) { x.classList.remove('on'); }); b.classList.add('on'); });
     });
+    FT.track('Search Results Viewed', {
+      search_query: query, results_count: document.querySelectorAll('a[data-track="search_result_click"]').length,
+      sort: document.querySelector('.sort .seg .on').dataset.sort, filter: 'all'
+    });
+    document.getElementById('results-form').addEventListener('submit', function (e) {
+      var nq = document.getElementById('results-input').value.trim();
+      e.preventDefault();
+      if (!nq) return;
+      FT.track('Search Submitted', { search_query: nq, location: 'results_page', suggestion_used: false });
+      var form = this;
+      FT.flushThen(function () { form.submit(); });
+    });
   }
 
   // ---- Sign-in flow: step 1 (email) → step 2 (password) → passkey prompt → home ----
@@ -226,18 +424,25 @@ document.addEventListener('DOMContentLoaded', function () {
     var emailForm = document.getElementById('email-form');
     var passwordForm = document.getElementById('password-form');
     var emailInput = document.getElementById('email');
+    var passwordInput = document.getElementById('password');
     var pending = sessionStorage.getItem('ft_login_email');
+
+    function once(input, name) {
+      var fired = false;
+      input.addEventListener('input', function () { if (!fired && input.value) { fired = true; FT.track(name); } });
+    }
+    once(emailInput, 'Email Typed');
+    once(passwordInput, 'Password Typed');
 
     function showPasswordStep(email) {
       sessionStorage.setItem('ft_login_email', email);
       document.getElementById('email-readonly').value = email;
       emailForm.classList.add('hidden');
       passwordForm.classList.remove('hidden');
-      document.getElementById('password').focus();
-      FT.track('login_step_view', { step: 'password' });
+      passwordInput.focus();
     }
 
-    if (pending) showPasswordStep(pending); else { emailInput.focus(); FT.track('login_step_view', { step: 'email' }); }
+    if (pending) showPasswordStep(pending); else emailInput.focus();
 
     emailForm.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -251,29 +456,39 @@ document.addEventListener('DOMContentLoaded', function () {
     passwordForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var field = document.getElementById('password-field');
-      var pw = document.getElementById('password').value;
-      if (!pw) { field.classList.add('invalid'); return; }
+      if (!passwordInput.value) { field.classList.add('invalid'); return; }
       field.classList.remove('invalid');
       var email = sessionStorage.getItem('ft_login_email');
-      FT.setUser({ email: email, keepSignedIn: document.getElementById('keep-signed-in').checked, signedInAt: new Date().toISOString() });
       sessionStorage.removeItem('ft_login_email');
-      FT.track('login_success', { email: email });
-      location.href = 'passkey.html';
+      FT.signIn(email, 'email');
+      FT.track('Signed In Completed', { sign_in_type: 'email' });
+      FT.setSource('post_sign_in');
+      FT.flushThen(function () { location.href = 'passkey.html'; });
     });
   }
 
   if (page === 'passkey') {
     if (!user) { location.replace('login.html'); return; }
     document.getElementById('passkey-email').value = user.email;
-    document.getElementById('passkey-setup').addEventListener('click', function () { FT.track('passkey_setup_complete', {}); });
-    document.getElementById('passkey-not-now').addEventListener('click', function () {
-      FT.track('passkey_dismissed', { do_not_show_again: document.getElementById('passkey-dismiss').checked });
+    document.getElementById('passkey-setup').addEventListener('click', function (e) {
+      FT.identifyUser({ passkey_enabled: true }); FT.setSource('post_passkey'); FT.navAfterFlush(e, this);
+    });
+    document.getElementById('passkey-not-now').addEventListener('click', function (e) {
+      FT.track('Passkey Skipped');
+      FT.identifyUser({ passkey_enabled: false });
+      FT.setSource('post_passkey');
+      FT.navAfterFlush(e, this);
     });
   }
 
   if (page === 'account') {
     if (!user) { location.replace('login.html'); return; }
     document.getElementById('account-email').textContent = user.email;
-    document.getElementById('sign-out').addEventListener('click', function () { FT.clearUser(); FT.track('sign_out', {}); });
+    document.getElementById('sign-out').addEventListener('click', function (e) {
+      e.preventDefault();
+      FT.track('Signed Out');
+      FT.setSource('post_sign_out');
+      FT.flushThen(function () { FT.signOut(); location.href = 'index.html'; });
+    });
   }
 });
