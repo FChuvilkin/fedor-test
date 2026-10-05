@@ -3,7 +3,7 @@
 // Amplitude events follow the agreed taxonomy (Title Case, Noun + Past-Tense Verb):
 //   Sign In Started, Email Typed, Password Typed, Signed In Completed, Passkey Skipped, Signed Out,
 //   Home Page Viewed, Section Viewed, Stream Viewed, Article Viewed, Article Saved, Article Unsaved,
-//   Article Shared, 75% Scrolled, Search Submitted, Search Results Viewed.
+//   Article Shared, Article Read, Search Submitted, Search Results Viewed.
 // Raw data-track clicks are console-logged only (FT.log) and never sent to Amplitude.
 
 var FT = (function () {
@@ -347,7 +347,9 @@ document.addEventListener('DOMContentLoaded', function () {
       // Where the next page's *Viewed event came from
       case 'logo_click': FT.setSource('logo'); break;
       case 'nav_click': if (el.dataset.section === 'home') FT.setSource('nav_home'); break;
-      case 'menu_link_click': if (el.dataset.section === 'home') FT.setSource('menu_home'); break;
+      // Only real links: a dead href="#" must not leave a stale source for an unrelated later page view
+      case 'menu_link_click': if (el.getAttribute('href') !== '#') FT.setSource(el.dataset.section === 'home' ? 'menu_home' : 'menu'); break;
+      case 'topic_click': if (el.getAttribute('href') !== '#') FT.setSource('article_topics'); break;
       case 'account_back_home': FT.setSource('account_back_home'); break;
       case 'headline_click': case 'video_click': FT.setSource(ARTICLE_SOURCES[el.dataset.section] || page); break;
       case 'most_read_click': FT.setSource('most_read'); break;
@@ -374,12 +376,12 @@ document.addEventListener('DOMContentLoaded', function () {
   // ---- Topic stream ----
   if (page === 'global-economy') {
     FT.track('Stream Viewed', {
-      stream_name: text(document.querySelector('.stream-title h1')), parent_section: 'World',
+      source: FT.takeSource('direct'), stream_name: text(document.querySelector('.stream-title h1')), parent_section: 'World',
       topic_followed: FT.isFollowed('Global Economy'), articles: articlesIn(document.querySelector('.stream-grid'), 'World')
     });
   }
 
-  // ---- Article: view, then 75% scroll once ----
+  // ---- Article: view, then Article Read once at 75% scroll ----
   if (page === 'article') {
     var art = currentArticle(), openedAt = Date.now(), scrolled = false;
     FT.track('Article Viewed', Object.assign({ source: FT.takeSource('direct') }, art));
@@ -389,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if ((window.scrollY + window.innerHeight) / h < 0.75) return;
       scrolled = true;
       window.removeEventListener('scroll', onScroll);
-      FT.track('75% Scrolled', Object.assign({ scroll_depth: 75, time_on_page_seconds: Math.round((Date.now() - openedAt) / 1000) }, art));
+      FT.track('Article Read', Object.assign({ scroll_depth: 75, time_on_page_seconds: Math.round((Date.now() - openedAt) / 1000) }, art));
     }
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
