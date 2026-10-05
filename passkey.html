@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Set up a passkey | Financial Times — Fedor Testing</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="auth" data-page="passkey">
+  <header class="auth-header"><a class="logo" href="index.html" data-track="logo_click">Financial Times</a></header>
+
+  <main class="auth-main">
+    <h1>Set up a passkey</h1>
+    <p>Fast, secure sign-in - no password needed</p>
+    <p>A passkey is a more secure, convenient alternative to a password. It lets you sign in with your fingerprint, face, or device screen lock.</p>
+    <div class="field">
+      <label for="passkey-email">Email</label>
+      <input type="email" id="passkey-email" disabled>
+    </div>
+    <a href="index.html" class="btn btn-teal btn-block" id="passkey-setup" data-track="passkey_setup_click">Set up a passkey</a>
+    <div class="info-box">
+      <strong>&#9432; Passkeys supported!</strong>
+      You can sign in using Face ID, fingerprint, or your device PIN.
+    </div>
+    <div class="or">or</div>
+    <a href="index.html" class="btn btn-outline btn-block" id="passkey-not-now" data-track="passkey_not_now_click">Not now</a>
+    <label class="check"><input type="checkbox" id="passkey-dismiss"> Do not show this again</label>
+    <p>Have a question? Visit the <a class="link" href="#" data-track="help_centre_click">FT Help Centre</a></p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
