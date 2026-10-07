@@ -79,7 +79,8 @@ var FT = (function () {
     if (enabled) amp.setUserId(email);
     identifyUser({ sign_in_type: type });
   }
-  function signOut() { clearUser(); if (enabled) amp.reset(); }
+  // Clear only the user ID on sign out; amp.reset() would also regenerate the device ID.
+  function signOut() { clearUser(); if (enabled) amp.setUserId(undefined); }
 
   // Send queued events now, then run `go` (usually a navigation). Falls through after 800ms if the network is slow.
   function flushThen(go) {

@@ -169,6 +169,9 @@ test('demo flow fires the agreed taxonomy with the right properties', async ({ p
   expect(home.event_properties.source).toBe('post_sign_out');
   expect(home.user_id).toBeUndefined();
   await expect(page.locator('#nav-signin')).toBeVisible();
+  // The device ID must survive sign in and sign out; only user_id comes and goes
+  const deviceIds = new Set(amp.events.map((e) => e.device_id));
+  expect(deviceIds.size).toBe(1);
 
   // ---- Taxonomy guard: only the 16 agreed events, nothing UI-level, leaks through ----
   const names = [...new Set(amp.custom().map((e) => e.event_type))];
