@@ -30,6 +30,7 @@ FT (Fedor Testing): a mock two-page news site styled like a broadsheet financial
 - Article pages declare their metadata on `<body data-article-id data-article-type data-section data-topic data-author data-paywalled>`.
 - `href="#"` links are dead links; `app.js` prevents navigation on them.
 - `.logged-in-only` / `.logged-out-only` classes toggle markup per auth state.
+- Scripts live in `<head>` on every page, in this order: Analytics SDK, `config.js`, Web Experiment script (`cdn.amplitude.com/script/<API_KEY>.experiment.js`), `app.js`. Web Experiment needs the SDK loaded first and must run before paint so variants apply without flicker.
 - Masthead, primary nav, burger drawer and search overlay are rendered by `renderHeader()` in `app.js` into `<div id="site-header" data-current="..." data-compact="true">`. Do not hand-write the masthead in pages.
 - Save buttons: `<button class="save-btn" data-article="slug">` (lists) or `class="rail-save"` (article share rail). State in `localStorage.ft_saved`.
 - myFT topic buttons: `<a class="myft-btn" data-topic="Name">`. State in `localStorage.ft_topics`; Global Economy, World and Companies are followed by default.

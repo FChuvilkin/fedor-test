@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign in | Financial Times — Fedor Testing</title>
   <link rel="stylesheet" href="styles.css">
+  <!-- Amplitude: Analytics SDK, then Web Experiment (needs the SDK and must sit in <head> so variants apply before paint). -->
+  <script src="https://cdn.amplitude.com/libs/analytics-browser-2.47.2-min.js.gz"></script>
+  <script src="config.js"></script>
+  <script src="https://cdn.amplitude.com/script/d89aa21c87650120100bf394c158c4f4.experiment.js"></script>
+  <script src="app.js"></script>
 </head>
 <body class="auth" data-page="login">
   <header class="auth-header"><a class="logo" href="index.html" data-track="logo_click">Financial Times</a></header>
@@ -54,8 +59,5 @@
     </form>
   </main>
 
-  <script src="https://cdn.amplitude.com/libs/analytics-browser-2.47.2-min.js.gz"></script>
-  <script src="config.js"></script>
-  <script src="app.js"></script>
 </body>
 </html>
