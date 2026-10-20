@@ -26,6 +26,8 @@ async function captureAmplitude(page) {
       for (const e of body.events || []) events.push(e);
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, events_ingested: (body.events || []).length, payload_size_bytes: 0, server_upload_time: Date.now() }) });
     }
+    // Session Replay plugin asks sr-client-cfg for configs.sessionReplay and logs an error if the key is missing.
+    if (/sr-client-cfg\./.test(req.url())) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ configs: { sessionReplay: {} } }) });
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
 
