@@ -50,6 +50,8 @@ var FT = (function () {
   function init() {
     if (!enabled) { console.warn('[FT] Amplitude disabled: SDK not loaded or AMPLITUDE_API_KEY missing in config.js'); return; }
     var user = getUser();
+    // Session Replay plugin: must be added before init. sampleRate 1 records every session (demo site).
+    if (window.sessionReplay && window.sessionReplay.plugin) amp.add(window.sessionReplay.plugin({ sampleRate: 1 }));
     amp.init(apiKey, user ? user.email : undefined, {
       serverZone: 'US',
       autocapture: { elementInteractions: false, formInteractions: false }
